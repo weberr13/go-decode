@@ -67,6 +67,7 @@ func TestDecodeNestedObject(t *testing.T) {
 		So(dec.Kind(), ShouldEqual, "record")
 		rec, ok := dec.(*Record)
 		So(ok, ShouldBeTrue)
+		So(rec.Sub.Kind(), ShouldEqual, "sub_record")
 		So(rec, ShouldResemble, &Record{kind: "record", Name: "foo", Sub: &SubRecord{kind: "sub_record", Name: "bar"}})
 	})
 	Convey("Unmarshal JSON of a nested object", t, func(){
@@ -85,6 +86,7 @@ func TestDecodeNestedObject(t *testing.T) {
 		So(dec.Kind(), ShouldEqual, "record")
 		rec, ok := dec.(*Record)
 		So(ok, ShouldBeTrue)
+		So(rec.Sub.Kind(), ShouldEqual, "sub_record")
 		So(rec, ShouldResemble, &Record{kind: "record", Name: "foo", Sub: &SubRecord{kind: "sub_record", Name: "bar"}})
 	})
 }
