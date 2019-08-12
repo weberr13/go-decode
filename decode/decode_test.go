@@ -27,7 +27,7 @@ func NewSubRecord() decode.Decodeable {
 type Record struct {
 	kind string		 
 	Name string		 
-	Sub  *SubRecord
+	Sub  decode.Decodeable
 }
 
 func (r Record) Kind() string {

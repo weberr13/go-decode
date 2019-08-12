@@ -39,7 +39,6 @@ func Decode(m map[string]interface{}, discriminator string, f Factory) (Decodeab
 			}
 			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(reflect.ValueOf(child))
 		} else {
-			fmt.Println(k, ":", v)
 			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(reflect.ValueOf(v))
 		}
 	}
