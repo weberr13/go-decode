@@ -34,7 +34,7 @@ jobs:
             mv c.out /tmp/artifacts/
       - store_artifacts:
           path: /tmp/artifacts
-#      - codecov/upload:
-#          file: /tmp/artifacts/c.out
-#          token: "3deae823-5799-4137-8044-1a8448616ffe"
+      - codecov/upload:
+          file: /tmp/artifacts/c.out
+          token: "9361b5f7-77fa-4766-b1d0-f1b028424249"
       
