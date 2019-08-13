@@ -38,29 +38,39 @@ func Decode(m map[string]interface{}, discriminator string, f Factory) (Decodeab
 				return nil, err
 			}
 			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(reflect.ValueOf(child))
-		} else {
-			if obj, ok := v.([]interface{}); ok {
-				elemType := reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Type()
-				s := reflect.MakeSlice(elemType, len(obj), len(obj))
-				for i := range obj {
-					s.Index(i).Set(reflect.ValueOf(obj[i]))	
-				}
-				reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(s)
-			} else if obj, ok := v.([]map[string]interface{}) ; ok {
-				elemType := reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Type()
-				s := reflect.MakeSlice(elemType, len(obj), len(obj))
-				for i := range obj {
-					child2, err := Decode(obj[i], discriminator, f)
+			continue
+		}
+		if obj, ok := v.([]interface{}); ok {
+			elemType := reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Type()
+			s := reflect.MakeSlice(elemType, len(obj), len(obj))
+			for i := range obj {
+				if objm, ok := obj[i].(map[string]interface{}); ok {
+					child2, err := Decode(objm, discriminator, f)
 					if err != nil {
 						return nil, err
 					}
-					s.Index(i).Set(reflect.Indirect(reflect.ValueOf(child2)))		
+					s.Index(i).Set(reflect.Indirect(reflect.ValueOf(child2)))
+					continue
 				}
-				reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(s)
-			} else {
-				reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(reflect.ValueOf(v))
+				s.Index(i).Set(reflect.ValueOf(obj[i]))	
 			}
+			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(s)
+			continue
 		}
+		if obj, ok := v.([]map[string]interface{}) ; ok {
+			elemType := reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Type()
+			s := reflect.MakeSlice(elemType, len(obj), len(obj))
+			for i := range obj {
+				child2, err := Decode(obj[i], discriminator, f)
+				if err != nil {
+					return nil, err
+				}
+				s.Index(i).Set(reflect.Indirect(reflect.ValueOf(child2)))		
+			}
+			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(s)
+			continue
+		}
+		reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(reflect.ValueOf(v))
 	}
 	return r, nil
 }
