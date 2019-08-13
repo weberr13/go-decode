@@ -24,9 +24,28 @@ func NewSubRecord() decode.Decodeable {
 	}
 }
 
+type SubRecord2 struct {
+	kind string		
+	Name string
+	Subs []SubRecord	
+}
+
+func (r SubRecord2) Kind() string {
+	return r.kind
+}
+
+func NewSubRecord2() decode.Decodeable {
+	return &SubRecord2{
+		kind: "sub_record2",
+	}
+}
+
 type Record struct {
 	kind string		 
-	Name string		 
+	Name string	 
+	Optional *string
+	Num *int
+	Slice []string
 	Sub  decode.Decodeable
 }
 
@@ -44,6 +63,7 @@ func MyTestFactory(kind string) (decode.Decodeable, error) {
 	fm := map[string]func() decode.Decodeable {
 		"record": NewRecord,
 		"sub_record": NewSubRecord,
+		"sub_record2": NewSubRecord2,
 	}
 	f, ok := fm[kind]
 	if !ok {
@@ -53,13 +73,38 @@ func MyTestFactory(kind string) (decode.Decodeable, error) {
 }
 
 func TestDecodeNestedObject(t *testing.T) {
+	
+	m := map[string]interface{}{
+		"name": "foo",
+		"kind": "record",
+		"slice": []string{"foo", "bar"},
+		"sub": map[string]interface{}{
+			"name": "bar",
+			"kind": "sub_record",
+		},
+	}
 	Convey("Decode a nested object", t, func(){
+		dec, err := decode.Decode(m, "kind", MyTestFactory)
+		So(err, ShouldBeNil)
+		So(dec.Kind(), ShouldEqual, "record")
+		rec, ok := dec.(*Record)
+		So(ok, ShouldBeTrue)
+		So(rec.Sub.Kind(), ShouldEqual, "sub_record")
+		So(rec, ShouldResemble, &Record{kind: "record", Name: "foo", Slice: []string{"foo", "bar"}, Sub: &SubRecord{kind: "sub_record", Name: "bar"}})
+	})	
+	Convey("Decode a nested object, different subtype", t, func(){
 		m := map[string]interface{}{
 			"name": "foo",
 			"kind": "record",
+			"slice": []string{"foo", "bar"},
 			"sub": map[string]interface{}{
-				"name": "bar",
-				"kind": "sub_record",
+				"subs": []map[string]interface{}{
+					{
+						"kind": "sub_record",
+						"name": "1",
+					},
+				},
+				"kind": "sub_record2",
 			},
 		}
 		dec, err := decode.Decode(m, "kind", MyTestFactory)
@@ -67,18 +112,23 @@ func TestDecodeNestedObject(t *testing.T) {
 		So(dec.Kind(), ShouldEqual, "record")
 		rec, ok := dec.(*Record)
 		So(ok, ShouldBeTrue)
-		So(rec.Sub.Kind(), ShouldEqual, "sub_record")
-		So(rec, ShouldResemble, &Record{kind: "record", Name: "foo", Sub: &SubRecord{kind: "sub_record", Name: "bar"}})
+		So(rec.Sub.Kind(), ShouldEqual, "sub_record2")
+		So(rec, ShouldResemble, &Record{
+			kind: "record", 
+			Name: "foo", 
+			Slice: []string{"foo", "bar"}, 
+			Sub: &SubRecord2{
+				kind: "sub_record2", 
+				Subs: []SubRecord{
+					SubRecord{
+						kind: "sub_record",
+						Name: "1",
+					},
+				},
+			},
+		})
 	})
 	Convey("Unmarshal JSON of a nested object", t, func(){
-		m := map[string]interface{}{
-			"name": "foo",
-			"kind": "record",
-			"sub": map[string]interface{}{
-				"name": "bar",
-				"kind": "sub_record",
-			},
-		}
 		b, err := json.Marshal(m)
 		So(err, ShouldBeNil)
 		dec, err := decode.UnmarshalJSON(b, "kind", MyTestFactory)
@@ -87,6 +137,6 @@ func TestDecodeNestedObject(t *testing.T) {
 		rec, ok := dec.(*Record)
 		So(ok, ShouldBeTrue)
 		So(rec.Sub.Kind(), ShouldEqual, "sub_record")
-		So(rec, ShouldResemble, &Record{kind: "record", Name: "foo", Sub: &SubRecord{kind: "sub_record", Name: "bar"}})
+		So(rec, ShouldResemble, &Record{kind: "record", Name: "foo", Slice: []string{"foo", "bar"}, Sub: &SubRecord{kind: "sub_record", Name: "bar"}})
 	})
 }

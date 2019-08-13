@@ -21,7 +21,7 @@ type Factory func (kind string) (Decodeable, error)
 func Decode(m map[string]interface{}, discriminator string, f Factory) (Decodeable, error) {
 	kind, ok := m[discriminator].(string)
 	if !ok {
-		return nil, fmt.Errorf("could not find discriminator %s", discriminator)
+		return nil, fmt.Errorf("could not find value for discriminator %s in map %#v", discriminator, m)
 	}
 	r, err := f(kind)
 	if err != nil {
@@ -39,7 +39,27 @@ func Decode(m map[string]interface{}, discriminator string, f Factory) (Decodeab
 			}
 			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(reflect.ValueOf(child))
 		} else {
-			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(reflect.ValueOf(v))
+			if obj, ok := v.([]interface{}); ok {
+				elemType := reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Type()
+				s := reflect.MakeSlice(elemType, len(obj), len(obj))
+				for i := range obj {
+					s.Index(i).Set(reflect.ValueOf(obj[i]))	
+				}
+				reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(s)
+			} else if obj, ok := v.([]map[string]interface{}) ; ok {
+				elemType := reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Type()
+				s := reflect.MakeSlice(elemType, len(obj), len(obj))
+				for i := range obj {
+					child2, err := Decode(obj[i], discriminator, f)
+					if err != nil {
+						return nil, err
+					}
+					s.Index(i).Set(reflect.Indirect(reflect.ValueOf(child2)))		
+				}
+				reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(s)
+			} else {
+				reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(reflect.ValueOf(v))
+			}
 		}
 	}
 	return r, nil
