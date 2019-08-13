@@ -83,6 +83,45 @@ func TestDecodeNestedObject(t *testing.T) {
 			"kind": "sub_record",
 		},
 	}
+	Convey("wrong discriminator, doesn't exist", t, func() {
+		_, err := decode.Decode(m, "kib", MyTestFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("wrong discriminator, not a type", t, func() {
+		_, err := decode.Decode(m, "name", MyTestFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("unrully child object", t, func() {
+		mp := map[string]interface{}{
+			"name": "foo",
+			"kind": "record",
+			"slice": []string{"foo", "bar"},
+			"sub": map[string]interface{}{
+				"name": "bar",
+				"kind": "unknown",
+			},
+		}
+		_, err := decode.Decode(mp, "kind", MyTestFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("unrully child object in slice", t, func() {
+		mp := map[string]interface{}{
+			"name": "foo",
+			"kind": "record",
+			"slice": []string{"foo", "bar"},
+			"sub": map[string]interface{}{
+				"subs": []map[string]interface{}{
+					{
+						"kind": "unknown",
+						"name": "1",
+					},
+				},
+				"kind": "sub_record2",
+			},
+		}
+		_, err := decode.Decode(mp, "kind", MyTestFactory)
+		So(err, ShouldNotBeNil)
+	})
 	Convey("Decode a nested object", t, func(){
 		dec, err := decode.Decode(m, "kind", MyTestFactory)
 		So(err, ShouldBeNil)
@@ -138,5 +177,11 @@ func TestDecodeNestedObject(t *testing.T) {
 		So(ok, ShouldBeTrue)
 		So(rec.Sub.Kind(), ShouldEqual, "sub_record")
 		So(rec, ShouldResemble, &Record{kind: "record", Name: "foo", Slice: []string{"foo", "bar"}, Sub: &SubRecord{kind: "sub_record", Name: "bar"}})
+	})
+	Convey("Unmarshal bad JSON", t, func(){
+		b, err := json.Marshal(m)
+		So(err, ShouldBeNil)
+		_, err = decode.UnmarshalJSON(b[1:], "kind", MyTestFactory)
+		So(err, ShouldNotBeNil)
 	})
 }
