@@ -8,9 +8,9 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
-// Decodeable things have a "Kind" that is the content of the encoded "discriminator"
+// Decodeable things have a "discriminator" to indicate their underlying type
 type Decodeable interface {
-	Kind() string	
+	Discriminator() string	
 }
 
 // Factory makes Decodeable things described by their kind
