@@ -8,17 +8,13 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
-// Decodeable things have a "discriminator" to indicate their underlying type
-type Decodeable interface {
-	Discriminator() string	
-}
 
 // Factory makes Decodeable things described by their kind
-type Factory func (kind string) (Decodeable, error)
+type Factory func (kind string) (interface{}, error)
 
 // Decode a map into a Decodeable thing given the discriminator and the factory for all possible
 // types and embedded types
-func Decode(m map[string]interface{}, discriminator string, f Factory) (Decodeable, error) {
+func Decode(m map[string]interface{}, discriminator string, f Factory) (interface{}, error) {
 	kind, ok := m[discriminator].(string)
 	if !ok {
 		return nil, fmt.Errorf("could not find value for discriminator %s in map %#v", discriminator, m)
@@ -76,7 +72,7 @@ func Decode(m map[string]interface{}, discriminator string, f Factory) (Decodeab
 }
 
 // UnmarshalJSON byte description of a Decodeable thing
-func UnmarshalJSON(b []byte, discriminator string, f Factory) (Decodeable, error) {
+func UnmarshalJSON(b []byte, discriminator string, f Factory) (interface{}, error) {
 	m := make(map[string]interface{})
 	err := json.Unmarshal(b, &m)
 	if err != nil {

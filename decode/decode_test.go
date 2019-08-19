@@ -14,11 +14,7 @@ type SubRecord struct {
 	Name string		
 }
 
-func (r SubRecord) Discriminator() string {
-	return r.kind
-}
-
-func NewSubRecord() decode.Decodeable {
+func NewSubRecord() interface{} {
 	return &SubRecord{
 		kind: "sub_record",
 	}
@@ -34,7 +30,7 @@ func (r SubRecord2) Discriminator() string {
 	return r.kind
 }
 
-func NewSubRecord2() decode.Decodeable {
+func NewSubRecord2() interface{} {
 	return &SubRecord2{
 		kind: "sub_record2",
 	}
@@ -46,21 +42,21 @@ type Record struct {
 	Optional *string
 	Num *int
 	Slice []string
-	Sub  decode.Decodeable
+	Sub  interface{}
 }
 
 func (r Record) Discriminator() string {
 	return r.kind
 }
 
-func NewRecord() decode.Decodeable {
+func NewRecord() interface{} {
 	return &Record{
 		kind: "record",
 	}
 }
 
-func MyTestFactory(kind string) (decode.Decodeable, error) {
-	fm := map[string]func() decode.Decodeable {
+func MyTestFactory(kind string) (interface{}, error) {
+	fm := map[string]func() interface{} {
 		"record": NewRecord,
 		"sub_record": NewSubRecord,
 		"sub_record2": NewSubRecord2,
@@ -145,10 +141,8 @@ func TestDecodeNestedObject(t *testing.T) {
 	Convey("Decode a nested object", t, func(){
 		dec, err := decode.Decode(m, "kind", MyTestFactory)
 		So(err, ShouldBeNil)
-		So(dec.Discriminator(), ShouldEqual, "record")
 		rec, ok := dec.(*Record)
 		So(ok, ShouldBeTrue)
-		So(rec.Sub.Discriminator(), ShouldEqual, "sub_record")
 		So(rec, ShouldResemble, &Record{kind: "record", Name: "foo", Slice: []string{"foo", "bar"}, Sub: &SubRecord{kind: "sub_record", Name: "bar"}})
 	})	
 	Convey("Unmarshal a nested object, different subtype", t, func(){
@@ -170,10 +164,8 @@ func TestDecodeNestedObject(t *testing.T) {
 		So(err, ShouldBeNil)
 		dec, err := decode.UnmarshalJSON(b, "kind", MyTestFactory)
 		So(err, ShouldBeNil)
-		So(dec.Discriminator(), ShouldEqual, "record")
 		rec, ok := dec.(*Record)
 		So(ok, ShouldBeTrue)
-		So(rec.Sub.Discriminator(), ShouldEqual, "sub_record2")
 		So(rec, ShouldResemble, &Record{
 			kind: "record", 
 			Name: "foo", 
@@ -206,10 +198,8 @@ func TestDecodeNestedObject(t *testing.T) {
 		}
 		dec, err := decode.Decode(m, "kind", MyTestFactory)
 		So(err, ShouldBeNil)
-		So(dec.Discriminator(), ShouldEqual, "record")
 		rec, ok := dec.(*Record)
 		So(ok, ShouldBeTrue)
-		So(rec.Sub.Discriminator(), ShouldEqual, "sub_record2")
 		So(rec, ShouldResemble, &Record{
 			kind: "record", 
 			Name: "foo", 
@@ -230,10 +220,8 @@ func TestDecodeNestedObject(t *testing.T) {
 		So(err, ShouldBeNil)
 		dec, err := decode.UnmarshalJSON(b, "kind", MyTestFactory)
 		So(err, ShouldBeNil)
-		So(dec.Discriminator(), ShouldEqual, "record")
 		rec, ok := dec.(*Record)
 		So(ok, ShouldBeTrue)
-		So(rec.Sub.Discriminator(), ShouldEqual, "sub_record")
 		So(rec, ShouldResemble, &Record{kind: "record", Name: "foo", Slice: []string{"foo", "bar"}, Sub: &SubRecord{kind: "sub_record", Name: "bar"}})
 	})
 	Convey("Unmarshal bad JSON", t, func(){
