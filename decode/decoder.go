@@ -68,10 +68,11 @@ func Decode(m map[string]interface{}, discriminator string, f Factory) (interfac
 		}
 		fmt.Println("field is :", reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Kind())
 		if reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Kind() == reflect.Ptr {
-			fmt.Println("creating pointer to val")
-			newVal := reflect.TypeOf(v)
+			newVal := reflect.TypeOf(reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Interface()).Elem()
+			fmt.Printf("%s creating pointer to val %v \n", k, newVal)
+
 			pV := reflect.New(newVal)
-			pV.Elem().Set(reflect.ValueOf(v))
+			pV.Elem().Set(reflect.ValueOf(v).Convert(newVal))
 			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(pV.Elem().Addr())
 			fmt.Println("foo")
 			continue

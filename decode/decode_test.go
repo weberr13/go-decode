@@ -25,19 +25,19 @@ func NewSubRecord() interface{} {
 }
 
 type SubRecord2 struct {
-	kind *MyString		
+	kind string	
 	Name MyString
+	PtrName *MyString
 	Subs []SubRecord	
 }
 
 func (r SubRecord2) Discriminator() string {
-	return string(*r.kind)
+	return string(r.kind)
 }
 
 func NewSubRecord2() interface{} {
-	encapsulated := MyString("sub_record2")
 	return &SubRecord2{
-		kind: &encapsulated,
+		kind: "sub_record2",
 	}
 }
 
@@ -169,6 +169,7 @@ func TestDecodeNestedObject(t *testing.T) {
 					},
 				},
 				"kind": "sub_record2",
+				"ptr_name": "sub_record2",
 			},
 		}
 		b, err := json.Marshal(m)
@@ -184,7 +185,8 @@ func TestDecodeNestedObject(t *testing.T) {
 			Name: "foo", 
 			Slice: []string{"foo", "bar"}, 
 			Sub: &SubRecord2{
-				kind: &encapsulated, 
+				kind: "sub_record2", 
+				PtrName: &encapsulated,
 				Subs: []SubRecord{
 					SubRecord{
 						kind: "sub_record",
@@ -207,6 +209,7 @@ func TestDecodeNestedObject(t *testing.T) {
 					},
 				},
 				"kind": "sub_record2",
+				"ptr_name": "sub_record2",
 			},
 		}
 		dec, err := decode.Decode(m, "kind", MyTestFactory)
@@ -220,7 +223,8 @@ func TestDecodeNestedObject(t *testing.T) {
 			Name: "foo", 
 			Slice: []string{"foo", "bar"}, 
 			Sub: &SubRecord2{
-				kind: &encapsulated, 
+				kind: "sub_record2", 
+				PtrName: &encapsulated,
 				Subs: []SubRecord{
 					SubRecord{
 						kind: "sub_record",
