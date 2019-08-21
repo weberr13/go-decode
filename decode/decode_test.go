@@ -170,6 +170,7 @@ func TestDecodeNestedObject(t *testing.T) {
 				},
 				"kind": "sub_record2",
 				"ptr_name": "sub_record2",
+				"name": "sub_record2",
 			},
 		}
 		b, err := json.Marshal(m)
@@ -187,6 +188,7 @@ func TestDecodeNestedObject(t *testing.T) {
 			Sub: &SubRecord2{
 				kind: "sub_record2", 
 				PtrName: &encapsulated,
+				Name: encapsulated,
 				Subs: []SubRecord{
 					SubRecord{
 						kind: "sub_record",
@@ -210,6 +212,7 @@ func TestDecodeNestedObject(t *testing.T) {
 				},
 				"kind": "sub_record2",
 				"ptr_name": "sub_record2",
+				"name": "sub_record2",
 			},
 		}
 		dec, err := decode.Decode(m, "kind", MyTestFactory)
@@ -225,6 +228,7 @@ func TestDecodeNestedObject(t *testing.T) {
 			Sub: &SubRecord2{
 				kind: "sub_record2", 
 				PtrName: &encapsulated,
+				Name: encapsulated,
 				Subs: []SubRecord{
 					SubRecord{
 						kind: "sub_record",

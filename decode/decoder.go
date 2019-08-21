@@ -66,18 +66,19 @@ func Decode(m map[string]interface{}, discriminator string, f Factory) (interfac
 			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(s)
 			continue
 		}
-		fmt.Println("field is :", reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Kind())
+
 		if reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Kind() == reflect.Ptr {
 			newVal := reflect.TypeOf(reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Interface()).Elem()
-			fmt.Printf("%s creating pointer to val %v \n", k, newVal)
-
 			pV := reflect.New(newVal)
 			pV.Elem().Set(reflect.ValueOf(v).Convert(newVal))
 			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(pV.Elem().Addr())
-			fmt.Println("foo")
 			continue
 		}
-		fmt.Println("field is :", reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Kind())
+		newVal := reflect.TypeOf(reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Interface())
+		if newVal != reflect.TypeOf(v) {
+			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(reflect.ValueOf(v).Convert(newVal))
+			continue
+		}
 		reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(reflect.ValueOf(v))
 		
 	}
