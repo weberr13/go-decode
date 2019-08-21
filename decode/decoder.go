@@ -78,10 +78,13 @@ func Decode(m map[string]interface{}, discriminator string, f Factory) (interfac
 			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(pV.Elem().Addr())
 			continue
 		}
-		newVal := reflect.TypeOf(reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Interface())
-		if newVal != reflect.TypeOf(v) {
-			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(reflect.ValueOf(v).Convert(newVal))
-			continue
+		reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k))
+		if reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).CanInterface() {
+			newVal := reflect.TypeOf(reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Interface())
+			if newVal != reflect.TypeOf(v) {
+				reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(reflect.ValueOf(v).Convert(newVal))
+				continue
+			}
 		}
 		reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(reflect.ValueOf(v))
 		
