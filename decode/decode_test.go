@@ -279,6 +279,43 @@ func TestDecodeNestedObject(t *testing.T) {
 			},
 		})
 	})
+	Convey("Decode a nested object, unexpected/misspelled fields", t, func(){
+		m := map[string]interface{}{
+			"name": "foo",
+			"kind": "record",
+			"slice": []string{"foo", "bar"},
+			"sub": map[string]interface{}{
+				"subs": []map[string]interface{}{
+					{
+						"kind": "sub_record",
+						"name": "1",
+					},
+				},
+				"kind": "sub_record2",
+				"ptrname": "sub_record2",
+				"namer": "sub_record2",
+			},
+		}
+		dec, err := decode.Decode(m, "kind", MyTestFactory)
+		So(err, ShouldBeNil)
+		rec, ok := dec.(*Record)
+		So(ok, ShouldBeTrue)
+		strName := "1"
+		So(rec, ShouldResemble, &Record{
+			kind: "record", 
+			Name: "foo", 
+			Slice: []string{"foo", "bar"}, 
+			Sub: &SubRecord2{
+				kind: "sub_record2", 
+				Subs: []SubRecord{
+					SubRecord{
+						kind: "sub_record",
+						Name: &strName,
+					},
+				},
+			},
+		})
+	})
 	Convey("Unmarshal JSON of a nested object", t, func(){
 		b, err := json.Marshal(m)
 		So(err, ShouldBeNil)

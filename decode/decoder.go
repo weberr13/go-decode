@@ -78,7 +78,10 @@ func Decode(m map[string]interface{}, discriminator string, f Factory) (interfac
 			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(pV.Elem().Addr())
 			continue
 		}
-		reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k))
+        if reflect.DeepEqual(reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)),reflect.Value{}) {
+			fmt.Printf("field by name %v not found", strcase.ToCamel(k))
+			continue
+		}
 		if reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).CanInterface() {
 			newVal := reflect.TypeOf(reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Interface())
 			if newVal != reflect.TypeOf(v) {
