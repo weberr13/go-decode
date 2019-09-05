@@ -57,7 +57,7 @@ func Decode(m map[string]interface{}, discriminator string, f Factory) (interfac
 					s.Index(i).Set(reflect.Indirect(reflect.ValueOf(child2)))
 					continue
 				}
-				s.Index(i).Set(reflect.ValueOf(obj[i]))
+				s.Index(i).Set(reflect.ValueOf(obj[i]))	
 			}
 			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(s)
 			continue
