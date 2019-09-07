@@ -57,7 +57,7 @@ func Decode(m map[string]interface{}, discriminator string, f Factory) (interfac
 					s.Index(i).Set(reflect.Indirect(reflect.ValueOf(child2)))
 					continue
 				}
-				s.Index(i).Set(reflect.ValueOf(obj[i]))	
+				s.Index(i).Set(reflect.ValueOf(obj[i]))
 			}
 			reflect.ValueOf(r).Elem().FieldByName(strcase.ToCamel(k)).Set(s)
 			continue
@@ -194,9 +194,9 @@ func DecodeInto(m map[string]interface{}, o interface{}, pf PathFactory) (interf
 	return o, nil
 }
 
-type iterable func() (next iterable, obj interface{})
+type iterator func() (next iterator, obj interface{})
 
-func decodeIntoArray(field reflect.Value, fldName string, iter iterable, len int, pf PathFactory) error {
+func decodeIntoArray(field reflect.Value, fldName string, iter iterator, len int, pf PathFactory) error {
 	var s reflect.Value
 	var ps reflect.Value
 
@@ -214,7 +214,7 @@ func decodeIntoArray(field reflect.Value, fldName string, iter iterable, len int
 	et := field.Type().Elem().Elem()
 
 	i := 0
-	for next, o := iter(); next != nil; next, o = iter() {
+	for next, o := iter(); next != nil; next, o = next() {
 		pV := reflect.ValueOf(o)
 
 		objm, ok := o.(map[string]interface{})
@@ -245,8 +245,8 @@ func decodeIntoArray(field reflect.Value, fldName string, iter iterable, len int
 
 func decodeIntoArrayOfObjectsField(field reflect.Value, fldName string, obj []map[string]interface{}, pf PathFactory) error {
 	n := 0
-	var i iterable
-	i = func() (iterable, interface{}) {
+	var i iterator
+	i = func() (iterator, interface{}) {
 		if n < (len(obj)) {
 			n++
 			return i, obj[n-1]
@@ -259,8 +259,8 @@ func decodeIntoArrayOfObjectsField(field reflect.Value, fldName string, obj []ma
 
 func decodeIntoArrayField(field reflect.Value, fldName string, obj []interface{}, pf PathFactory) error {
 	n := 0
-	var i iterable
-	i = func() (iterable, interface{}) {
+	var i iterator
+	i = func() (iterator, interface{}) {
 		if n < (len(obj)) {
 			n++
 			return i, obj[n-1]
