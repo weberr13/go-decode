@@ -5,17 +5,18 @@
 package decode_test
 
 import (
-	"testing"
-	"fmt"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/weberr13/go-decode/decode"
 )
 
 type SubRecord struct {
-	kind string		
-	Name *string		
+	kind string
+	Name *string
 }
 
 type MyString string
@@ -29,10 +30,10 @@ func NewSubRecord() interface{} {
 }
 
 type SubRecord2 struct {
-	kind string	
-	Name MyString
+	kind    string
+	Name    MyString
 	PtrName *MyString
-	Subs []SubRecord	
+	Subs    []SubRecord
 }
 
 func (r SubRecord2) Discriminator() string {
@@ -46,12 +47,12 @@ func NewSubRecord2() interface{} {
 }
 
 type Record struct {
-	kind string		 
-	Name string	 
+	kind     string
+	Name     string
 	Optional *string
-	Num *int
-	Slice []string
-	Sub  interface{}
+	Num      *int
+	Slice    []string
+	Sub      interface{}
 }
 
 func (r Record) Discriminator() string {
@@ -64,10 +65,14 @@ func NewRecord() interface{} {
 	}
 }
 
+type Envelope struct {
+	Owners []*PetOwner
+}
+
 func MyTestFactory(kind string) (interface{}, error) {
-	fm := map[string]func() interface{} {
-		"record": NewRecord,
-		"sub_record": NewSubRecord,
+	fm := map[string]func() interface{}{
+		"record":      NewRecord,
+		"sub_record":  NewSubRecord,
 		"sub_record2": NewSubRecord2,
 	}
 	f, ok := fm[kind]
@@ -78,10 +83,10 @@ func MyTestFactory(kind string) (interface{}, error) {
 }
 
 func TestDecodeNestedObject(t *testing.T) {
-	
+
 	m := map[string]interface{}{
-		"name": "foo",
-		"kind": "record",
+		"name":  "foo",
+		"kind":  "record",
 		"slice": []string{"foo", "bar"},
 		"sub": map[string]interface{}{
 			"name": "bar",
@@ -96,10 +101,22 @@ func TestDecodeNestedObject(t *testing.T) {
 		_, err := decode.Decode(m, "name", MyTestFactory)
 		So(err, ShouldNotBeNil)
 	})
+
+	// todo: this panics because the expectation is that sub is an object, not base type, but should defend
+	//Convey("unrully child object - assigned wrong type", t, func() {
+	//	mp := map[string]interface{}{
+	//		"name":  "foo",
+	//		"kind":  "record",
+	//		"slice": []string{"foo", "bar"},
+	//		"sub": "12",
+	//	}
+	//	_, err := decode.Decode(mp, "kind", MyTestFactory)
+	//	So(err, ShouldNotBeNil)
+	//})
 	Convey("unrully child object", t, func() {
 		mp := map[string]interface{}{
-			"name": "foo",
-			"kind": "record",
+			"name":  "foo",
+			"kind":  "record",
 			"slice": []string{"foo", "bar"},
 			"sub": map[string]interface{}{
 				"name": "bar",
@@ -111,8 +128,8 @@ func TestDecodeNestedObject(t *testing.T) {
 	})
 	Convey("decode unruly child object in slice", t, func() {
 		mp := map[string]interface{}{
-			"name": "foo",
-			"kind": "record",
+			"name":  "foo",
+			"kind":  "record",
 			"slice": []string{"foo", "bar"},
 			"sub": map[string]interface{}{
 				"subs": []map[string]interface{}{
@@ -129,8 +146,8 @@ func TestDecodeNestedObject(t *testing.T) {
 	})
 	Convey("unmarshal unruly child object in slice", t, func() {
 		mp := map[string]interface{}{
-			"name": "foo",
-			"kind": "record",
+			"name":  "foo",
+			"kind":  "record",
 			"slice": []string{"foo", "bar"},
 			"sub": map[string]interface{}{
 				"subs": []map[string]interface{}{
@@ -147,23 +164,23 @@ func TestDecodeNestedObject(t *testing.T) {
 		_, err = decode.UnmarshalJSON(b, "kind", MyTestFactory)
 		So(err, ShouldNotBeNil)
 	})
-	Convey("Decode a nested object", t, func(){
+	Convey("Decode a nested object", t, func() {
 		dec, err := decode.Decode(m, "kind", MyTestFactory)
 		So(err, ShouldBeNil)
 		rec, ok := dec.(*Record)
 		So(ok, ShouldBeTrue)
 		name := "bar"
 		So(rec, ShouldResemble, &Record{
-			kind: "record", 
-			Name: "foo", 
-			Slice: []string{"foo", "bar"}, 
-			Sub: &SubRecord{kind: "sub_record", Name: &name},
-			})
-	})	
-	Convey("Unmarshal a nested object, different subtype", t, func(){
+			kind:  "record",
+			Name:  "foo",
+			Slice: []string{"foo", "bar"},
+			Sub:   &SubRecord{kind: "sub_record", Name: &name},
+		})
+	})
+	Convey("Unmarshal a nested object, different subtype", t, func() {
 		m := map[string]interface{}{
-			"name": "foo",
-			"kind": "record",
+			"name":  "foo",
+			"kind":  "record",
 			"slice": []string{"foo", "bar"},
 			"sub": map[string]interface{}{
 				"subs": []map[string]interface{}{
@@ -172,9 +189,9 @@ func TestDecodeNestedObject(t *testing.T) {
 						"name": "1",
 					},
 				},
-				"kind": "sub_record2",
+				"kind":     "sub_record2",
 				"ptr_name": "sub_record2",
-				"name": "sub_record2",
+				"name":     "sub_record2",
 			},
 		}
 		b, err := json.Marshal(m)
@@ -186,13 +203,13 @@ func TestDecodeNestedObject(t *testing.T) {
 		encapsulated := MyString("sub_record2")
 		strName := "1"
 		So(rec, ShouldResemble, &Record{
-			kind: "record", 
-			Name: "foo", 
-			Slice: []string{"foo", "bar"}, 
+			kind:  "record",
+			Name:  "foo",
+			Slice: []string{"foo", "bar"},
 			Sub: &SubRecord2{
-				kind: "sub_record2", 
+				kind:    "sub_record2",
 				PtrName: &encapsulated,
-				Name: encapsulated,
+				Name:    encapsulated,
 				Subs: []SubRecord{
 					SubRecord{
 						kind: "sub_record",
@@ -202,10 +219,10 @@ func TestDecodeNestedObject(t *testing.T) {
 			},
 		})
 	})
-	Convey("Decode a nested object, different subtype", t, func(){
+	Convey("Decode a nested object, different subtype", t, func() {
 		m := map[string]interface{}{
-			"name": "foo",
-			"kind": "record",
+			"name":  "foo",
+			"kind":  "record",
 			"slice": []string{"foo", "bar"},
 			"sub": map[string]interface{}{
 				"subs": []map[string]interface{}{
@@ -223,13 +240,13 @@ func TestDecodeNestedObject(t *testing.T) {
 		So(ok, ShouldBeTrue)
 		strName := "1"
 		So(rec, ShouldResemble, &Record{
-			kind: "record", 
-			Name: "foo", 
-			Slice: []string{"foo", "bar"}, 
+			kind:  "record",
+			Name:  "foo",
+			Slice: []string{"foo", "bar"},
 			Sub: &SubRecord2{
-				kind: "sub_record2", 
+				kind:    "sub_record2",
 				PtrName: nil,
-				Name: "",
+				Name:    "",
 				Subs: []SubRecord{
 					SubRecord{
 						kind: "sub_record",
@@ -239,10 +256,10 @@ func TestDecodeNestedObject(t *testing.T) {
 			},
 		})
 	})
-	Convey("Decode a nested object, different subtype, pointer and aliased type values", t, func(){
+	Convey("Decode a nested object, different subtype, pointer and aliased type values", t, func() {
 		m := map[string]interface{}{
-			"name": "foo",
-			"kind": "record",
+			"name":  "foo",
+			"kind":  "record",
 			"slice": []string{"foo", "bar"},
 			"sub": map[string]interface{}{
 				"subs": []map[string]interface{}{
@@ -251,9 +268,9 @@ func TestDecodeNestedObject(t *testing.T) {
 						"name": "1",
 					},
 				},
-				"kind": "sub_record2",
+				"kind":     "sub_record2",
 				"ptr_name": "sub_record2",
-				"name": "sub_record2",
+				"name":     "sub_record2",
 			},
 		}
 		dec, err := decode.Decode(m, "kind", MyTestFactory)
@@ -263,13 +280,13 @@ func TestDecodeNestedObject(t *testing.T) {
 		encapsulated := MyString("sub_record2")
 		strName := "1"
 		So(rec, ShouldResemble, &Record{
-			kind: "record", 
-			Name: "foo", 
-			Slice: []string{"foo", "bar"}, 
+			kind:  "record",
+			Name:  "foo",
+			Slice: []string{"foo", "bar"},
 			Sub: &SubRecord2{
-				kind: "sub_record2", 
+				kind:    "sub_record2",
 				PtrName: &encapsulated,
-				Name: encapsulated,
+				Name:    encapsulated,
 				Subs: []SubRecord{
 					SubRecord{
 						kind: "sub_record",
@@ -279,10 +296,10 @@ func TestDecodeNestedObject(t *testing.T) {
 			},
 		})
 	})
-	Convey("Decode a nested object, unexpected/misspelled fields", t, func(){
+	Convey("Decode a nested object, unexpected/misspelled fields", t, func() {
 		m := map[string]interface{}{
-			"name": "foo",
-			"kind": "record",
+			"name":  "foo",
+			"kind":  "record",
 			"slice": []string{"foo", "bar"},
 			"sub": map[string]interface{}{
 				"subs": []map[string]interface{}{
@@ -291,9 +308,9 @@ func TestDecodeNestedObject(t *testing.T) {
 						"name": "1",
 					},
 				},
-				"kind": "sub_record2",
+				"kind":    "sub_record2",
 				"ptrname": "sub_record2",
-				"namer": "sub_record2",
+				"namer":   "sub_record2",
 			},
 		}
 		dec, err := decode.Decode(m, "kind", MyTestFactory)
@@ -302,11 +319,11 @@ func TestDecodeNestedObject(t *testing.T) {
 		So(ok, ShouldBeTrue)
 		strName := "1"
 		So(rec, ShouldResemble, &Record{
-			kind: "record", 
-			Name: "foo", 
-			Slice: []string{"foo", "bar"}, 
+			kind:  "record",
+			Name:  "foo",
+			Slice: []string{"foo", "bar"},
 			Sub: &SubRecord2{
-				kind: "sub_record2", 
+				kind: "sub_record2",
 				Subs: []SubRecord{
 					SubRecord{
 						kind: "sub_record",
@@ -316,7 +333,7 @@ func TestDecodeNestedObject(t *testing.T) {
 			},
 		})
 	})
-	Convey("Unmarshal JSON of a nested object", t, func(){
+	Convey("Unmarshal JSON of a nested object", t, func() {
 		b, err := json.Marshal(m)
 		So(err, ShouldBeNil)
 		dec, err := decode.UnmarshalJSON(b, "kind", MyTestFactory)
@@ -325,16 +342,90 @@ func TestDecodeNestedObject(t *testing.T) {
 		So(ok, ShouldBeTrue)
 		name := "bar"
 		So(rec, ShouldResemble, &Record{
-			kind: "record", 
-			Name: "foo", 
-			Slice: []string{"foo", "bar"}, 
-			Sub: &SubRecord{kind: "sub_record", Name: &name},
-			})
+			kind:  "record",
+			Name:  "foo",
+			Slice: []string{"foo", "bar"},
+			Sub:   &SubRecord{kind: "sub_record", Name: &name},
+		})
 	})
-	Convey("Unmarshal bad JSON", t, func(){
+	Convey("Unmarshal bad JSON", t, func() {
 		b, err := json.Marshal(m)
 		So(err, ShouldBeNil)
 		_, err = decode.UnmarshalJSON(b[1:], "kind", MyTestFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("Test OneOf decoding - pets1.json", t, func() {
+		// load spec from testdata identified by file
+		bytes, err := ioutil.ReadFile("testdata/pets1.json")
+		So(err, ShouldBeNil)
+
+		v, err := decode.UnmarshalJSONInto(bytes, &Envelope{}, SchemaPathFactory)
+		So(err, ShouldBeNil)
+		_, err = json.MarshalIndent(v, "", "  ")
+		So(err, ShouldBeNil)
+	})
+	Convey("Test OneOf decoding - array of objects", t, func() {
+		b := `{ "name": "john", "owns": [{ "type": "Palace"}, {"type": "House"}]}`
+		_, err := decode.UnmarshalJSONInto([]byte(b), &PetOwner{}, SchemaPathFactory)
+		So(err, ShouldBeNil)
+	})
+	Convey("Test OneOf decoding - array of user crafted objects ", t, func() {
+		var y = struct{ LivesIn *[]struct{ Age *int } }{}
+		var x = struct{ LivesIn []*struct{ Age *int } }{}
+		var z = struct{ LivesIn []*struct{ Age int } }{}
+		m := map[string]interface{}{
+			"livesIn": []map[string]interface{}{
+				{"age": 7},
+			},
+		}
+
+		_, err := decode.DecodeInto(m, &y, SchemaPathFactory)
+		So(err, ShouldBeNil)
+		_, err = decode.DecodeInto(m, &x, SchemaPathFactory)
+		So(err, ShouldBeNil)
+		_, err = decode.DecodeInto(m, &z, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("Test OneOf decoding - array of objects - bad oneOf", t, func() {
+
+		b := `{ "name": "john", "owns": [{ "class": "Palace"}, {"class":12}]}`
+		_, err := decode.UnmarshalJSONInto([]byte(b), &PetOwner{}, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("Test OneOf decoding - array of objects - bad property type", t, func() {
+		b := `{ "name": "john", "owns": [{ "class": { "type": "House", "rooms": "string"}}]}`
+		_, err := decode.UnmarshalJSONInto([]byte(b), &PetOwner{}, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("Test OneOf decoding - wrong oneOf discriminator", t, func() {
+		b := `{ "name": "john", "livesIn": { "class": "Palace"}}`
+		_, err := decode.UnmarshalJSONInto([]byte(b), &PetOwner{}, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("Test OneOf decoding - bad json", t, func() {
+		b := `{ "name": `
+		_, err := decode.UnmarshalJSONInto([]byte(b), &PetOwner{}, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("Test OneOf decoding - cannot decode into object that has non pointer fields", t, func() {
+		var x = struct {
+			Name    string
+			LivesIn []string
+		}{}
+		b := `{ "livesIn": { "class": "Palace"}}`
+		_, err := decode.UnmarshalJSONInto([]byte(b), &x, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+		var y = struct{ LivesIn *struct{ Age int } }{}
+		b = `{ "livesIn": { "age": 7}}`
+		_, err = decode.UnmarshalJSONInto([]byte(b), &y, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("Test OneOf decoding - cannot decode into object is not struct pointer", t, func() {
+		b := `{ "name": "john"}`
+		i := 1
+		_, err := decode.UnmarshalJSONInto([]byte(b), i, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+		_, err = decode.UnmarshalJSONInto([]byte(b), &i, SchemaPathFactory)
 		So(err, ShouldNotBeNil)
 	})
 }

@@ -1,0 +1,88 @@
+{
+  "owners": [
+    {
+      "name": "John",
+      "age": 27,
+      "favorite": {
+        "type": "Cat",
+        "mood": "ALOOF",
+        "sound": {
+          "type": "PURR",
+          "heritage": {
+            "name": "Buckingham",
+            "class": {
+              "type": "Palace",
+              "halls": 7,
+              "rooms": 20
+            }
+          }
+        }
+      },
+      "dogs": [
+        {
+          "type": "Dog",
+          "kind": "SHEPHERD",
+          "sound": {
+            "type": "BARK",
+            "volume": 7
+          }
+        },
+        {
+          "type": "Dog",
+          "kind": "TOY",
+          "sound": {
+            "type": "BARK",
+            "volume": 1
+          }
+        }
+      ],
+      "owns": [
+        {
+          "name": "Buckingham",
+          "class": {
+            "type": "Palace",
+            "halls": 7,
+            "rooms": 20
+          }
+        },
+        {
+          "name": "Mysore",
+          "class": {
+            "type": "Palace",
+            "halls": 12,
+            "rooms": 10
+          }
+        },
+        {
+          "name": "White",
+          "class": {
+            "type": "House",
+            "halls": 12,
+            "rooms": 100
+          }
+        },
+        {
+          "name": "Little house in the prairie",
+          "class": {
+            "type": "House",
+            "rooms": 20
+          }
+        }
+      ],
+      "petLivesIn": {
+        "name": "Buckingham",
+        "class": {
+          "type": "Palace",
+          "halls": 7,
+          "rooms": 20
+        }
+      },
+      "livesIn": {
+        "name": "Mysore",
+        "type": "Palace",
+        "halls": 12,
+        "rooms": 10
+      }
+    }
+  ]
+}
