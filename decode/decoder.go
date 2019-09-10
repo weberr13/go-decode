@@ -166,18 +166,11 @@ func DecodeInto(m map[string]interface{}, o interface{}, pf PathFactory) (interf
 			continue
 		}
 
-		// todo: this is not required because of field validity check above. Check this out
-		//if reflect.DeepEqual(field, reflect.Value{}) {
-		//	fmt.Printf("field by name %v not found\n", fldName)
-		//	continue
-		//}
-
 		// special case for empty interfaces - they must represent objects hence we should not be here
 		if field.Type().NumMethod() == 0 {
 			return nil, fmt.Errorf("Invalid value found for field name %v (expected object, not basic type)\n", fldName)
 		}
 
-		// todo: is this required anymore?
 		if field.CanInterface() {
 			newVal := reflect.TypeOf(field.Interface())
 			if newVal != reflect.TypeOf(v) {
@@ -272,6 +265,7 @@ func decodeIntoArrayField(field reflect.Value, fldName string, obj []interface{}
 }
 
 func decodeIntoObjectField(field reflect.Value, fldName string, v map[string]interface{}, pf PathFactory) error {
+	// todo: loosen this restriction in future
 	if field.Kind() != reflect.Ptr {
 		return fmt.Errorf("expecting target field %s to be of type object pointer", fldName)
 	}

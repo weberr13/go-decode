@@ -357,9 +357,7 @@ func TestDecodeNestedObject(t *testing.T) {
 	Convey("Test OneOf decoding - pets1.json", t, func() {
 		// load spec from testdata identified by file
 		bytes, err := ioutil.ReadFile("testdata/pets1.json")
-		if err != nil {
-			t.Fatal(err)
-		}
+		So(err, ShouldBeNil)
 
 		v, err := decode.UnmarshalJSONInto(bytes, &Envelope{}, SchemaPathFactory)
 		So(err, ShouldBeNil)
