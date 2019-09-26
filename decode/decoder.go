@@ -189,23 +189,26 @@ func DecodeInto(m map[string]interface{}, o interface{}, pf PathFactory) (interf
 
 type iterator func() (next iterator, obj interface{})
 
-func decodeIntoArray(field reflect.Value, _ string, iter iterator, len int, pf PathFactory) error {
+func decodeIntoArray(field reflect.Value, iter iterator, len int, pf PathFactory) error {
 	var s reflect.Value
 	var ps reflect.Value
-
-	// two options:
+	var et reflect.Type
+	// three options:
 	// - []*Type	- this can be manually created
 	// - *[]Type	- this is the codegen option
+	// - []Type     - This is a required array
 	if field.Kind() == reflect.Ptr && field.Type().Elem().Kind() == reflect.Slice {
 		s = reflect.MakeSlice(field.Type().Elem(), len, len)
 		ps = ptr(s)
+		et = field.Type().Elem().Elem()
 	} else if field.Kind() == reflect.Slice && field.Type().Elem().Kind() == reflect.Ptr {
 		s = reflect.MakeSlice(field.Type(), len, len)
+		et = field.Type().Elem().Elem()
+	} else if field.Kind() == reflect.Slice {
+		s = reflect.MakeSlice(field.Type(), len, len)
+		et = field.Type().Elem()
 	}
-
-	// get the underlying element type
-	et := field.Type().Elem().Elem()
-
+	
 	i := 0
 	for next, o := iter(); next != nil; next, o = next() {
 		pV := reflect.ValueOf(o)
@@ -247,7 +250,7 @@ func decodeIntoArrayOfObjectsField(field reflect.Value, fldName string, obj []ma
 		return nil, nil
 	}
 
-	return decodeIntoArray(field, fldName, i, len(obj), pf)
+	return decodeIntoArray(field, i, len(obj), pf)
 }
 
 func decodeIntoArrayField(field reflect.Value, fldName string, obj []interface{}, pf PathFactory) error {
@@ -261,11 +264,18 @@ func decodeIntoArrayField(field reflect.Value, fldName string, obj []interface{}
 		return nil, nil
 	}
 
-	return decodeIntoArray(field, fldName, i, len(obj), pf)
+	return decodeIntoArray(field, i, len(obj), pf)
 }
 
 func decodeIntoObjectField(field reflect.Value, _ string, v map[string]interface{}, pf PathFactory) error {
-	pV := reflect.New(field.Type().Elem()).Interface()
+	var pV interface{}
+
+	if field.Type().Kind() == reflect.Ptr {
+		pV = reflect.New(field.Type().Elem()).Interface()
+	} else {
+		pV = reflect.New(field.Type()).Interface()
+	}
+	
 	child, err := DecodeInto(v, pV, pf)
 	if err != nil {
 		return err
