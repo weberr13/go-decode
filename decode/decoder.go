@@ -167,7 +167,7 @@ func DecodeInto(m map[string]interface{}, o interface{}, pf PathFactory) (interf
 		}
 
 		// special case for empty interfaces - they must represent objects hence we should not be here
-		if field.Type().NumMethod() == 0 {
+		if field.Type().Kind() == reflect.Interface && field.Type().NumMethod() == 0 {
 			return nil, fmt.Errorf("Invalid value found for field name %v (expected object, not basic type)\n", fldName)
 		}
 
@@ -189,7 +189,7 @@ func DecodeInto(m map[string]interface{}, o interface{}, pf PathFactory) (interf
 
 type iterator func() (next iterator, obj interface{})
 
-func decodeIntoArray(field reflect.Value, fldName string, iter iterator, len int, pf PathFactory) error {
+func decodeIntoArray(field reflect.Value, _ string, iter iterator, len int, pf PathFactory) error {
 	var s reflect.Value
 	var ps reflect.Value
 
@@ -264,21 +264,22 @@ func decodeIntoArrayField(field reflect.Value, fldName string, obj []interface{}
 	return decodeIntoArray(field, fldName, i, len(obj), pf)
 }
 
-func decodeIntoObjectField(field reflect.Value, fldName string, v map[string]interface{}, pf PathFactory) error {
-	// todo: loosen this restriction in future
-	if field.Kind() != reflect.Ptr {
-		return fmt.Errorf("expecting target field %s to be of type object pointer", fldName)
-	}
+func decodeIntoObjectField(field reflect.Value, _ string, v map[string]interface{}, pf PathFactory) error {
 	pV := reflect.New(field.Type().Elem()).Interface()
 	child, err := DecodeInto(v, pV, pf)
 	if err != nil {
 		return err
 	}
+	if field.Kind() != reflect.Ptr {
+		field.Set(reflect.ValueOf(child).Elem())
+		return nil
+	}
+
 	field.Set(reflect.ValueOf(child))
 	return nil
 }
 
-func decodeIntoOneOfField(field reflect.Value, fldName string, objSchemaName string, k string, v map[string]interface{}, pf PathFactory) (bool, error) {
+func decodeIntoOneOfField(field reflect.Value, _ string, objSchemaName string, k string, v map[string]interface{}, pf PathFactory) (bool, error) {
 	var pp string
 	var f OneOfFactory
 	var child interface{}
