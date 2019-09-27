@@ -69,6 +69,21 @@ type Envelope struct {
 	Owners []*PetOwner
 }
 
+type LivesInRequiredArray struct {
+	Name    string
+	LivesIn []string
+}
+
+type RequiredBasicTypes struct {
+	Age int
+	Name string
+	Lost bool
+}
+
+type LivesInStruct struct {
+	LivesIn *RequiredBasicTypes
+}
+
 func MyTestFactory(kind string) (interface{}, error) {
 	fm := map[string]func() interface{}{
 		"record":      NewRecord,
@@ -81,6 +96,7 @@ func MyTestFactory(kind string) (interface{}, error) {
 	}
 	return f(), nil
 }
+
 
 func TestDecodeNestedObject(t *testing.T) {
 
@@ -384,7 +400,7 @@ func TestDecodeNestedObject(t *testing.T) {
 		_, err = decode.DecodeInto(m, &x, SchemaPathFactory)
 		So(err, ShouldBeNil)
 		_, err = decode.DecodeInto(m, &z, SchemaPathFactory)
-		So(err, ShouldNotBeNil)
+		So(err, ShouldBeNil)
 	})
 	Convey("Test OneOf decoding - array of objects - bad oneOf", t, func() {
 
@@ -407,18 +423,19 @@ func TestDecodeNestedObject(t *testing.T) {
 		_, err := decode.UnmarshalJSONInto([]byte(b), &PetOwner{}, SchemaPathFactory)
 		So(err, ShouldNotBeNil)
 	})
-	Convey("Test OneOf decoding - cannot decode into object that has non pointer fields", t, func() {
-		var x = struct {
-			Name    string
-			LivesIn []string
-		}{}
-		b := `{ "livesIn": { "class": "Palace"}}`
-		_, err := decode.UnmarshalJSONInto([]byte(b), &x, SchemaPathFactory)
-		So(err, ShouldNotBeNil)
-		var y = struct{ LivesIn *struct{ Age int } }{}
-		b = `{ "livesIn": { "age": 7}}`
-		_, err = decode.UnmarshalJSONInto([]byte(b), &y, SchemaPathFactory)
-		So(err, ShouldNotBeNil)
+	Convey("Test OneOf decoding - can decode into object that has required array", t, func() {
+		x := LivesInRequiredArray{}
+		b := `{ "livesIn": [ "class", "Palace"]}`
+		i, err := decode.UnmarshalJSONInto([]byte(b), &x, SchemaPathFactory)
+		So(err, ShouldBeNil)
+		So(i.(*LivesInRequiredArray), ShouldResemble, &LivesInRequiredArray{LivesIn: []string{"class", "Palace"}})
+	})
+	Convey("Test OneOf decoding - can decode into object that has required basic types", t, func() {
+		y := LivesInStruct{}
+		b := `{ "livesIn": { "age": 7, "name": "spot", "lost": false}}`
+		i, err := decode.UnmarshalJSONInto([]byte(b), &y, SchemaPathFactory)
+		So(err, ShouldBeNil)
+		So(i.(*LivesInStruct), ShouldResemble, &LivesInStruct{LivesIn: &RequiredBasicTypes{Age: 7, Name: "spot", Lost: false}})
 	})
 	Convey("Test OneOf decoding - cannot decode into object is not struct pointer", t, func() {
 		b := `{ "name": "john"}`
