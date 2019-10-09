@@ -207,8 +207,10 @@ func decodeIntoArray(field reflect.Value, iter iterator, len int, pf PathFactory
 	} else if field.Kind() == reflect.Slice {
 		s = reflect.MakeSlice(field.Type(), len, len)
 		et = field.Type().Elem()
+	} else {
+		return fmt.Errorf("Invalid field")
 	}
-	
+
 	i := 0
 	for next, o := iter(); next != nil; next, o = next() {
 		pV := reflect.ValueOf(o)
@@ -275,7 +277,7 @@ func decodeIntoObjectField(field reflect.Value, _ string, v map[string]interface
 	} else {
 		pV = reflect.New(field.Type()).Interface()
 	}
-	
+
 	child, err := DecodeInto(v, pV, pf)
 	if err != nil {
 		return err

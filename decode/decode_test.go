@@ -75,7 +75,7 @@ type LivesInRequiredArray struct {
 }
 
 type RequiredBasicTypes struct {
-	Age int
+	Age  int
 	Name string
 	Lost bool
 }
@@ -96,7 +96,6 @@ func MyTestFactory(kind string) (interface{}, error) {
 	}
 	return f(), nil
 }
-
 
 func TestDecodeNestedObject(t *testing.T) {
 
@@ -443,6 +442,11 @@ func TestDecodeNestedObject(t *testing.T) {
 		_, err := decode.UnmarshalJSONInto([]byte(b), i, SchemaPathFactory)
 		So(err, ShouldNotBeNil)
 		_, err = decode.UnmarshalJSONInto([]byte(b), &i, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("Test OneOf decoding - invalid oneOf field kind", t, func() {
+		b := `{ "name": "john", "livesIn": [] }`
+		_, err := decode.UnmarshalJSONInto([]byte(b), &PetOwner{}, SchemaPathFactory)
 		So(err, ShouldNotBeNil)
 	})
 }
