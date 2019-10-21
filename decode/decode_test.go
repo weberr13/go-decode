@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/weberr13/go-decode/decode"
@@ -82,6 +83,11 @@ type RequiredBasicTypes struct {
 
 type LivesInStruct struct {
 	LivesIn *RequiredBasicTypes
+}
+
+type TimedStruct struct {
+	Name string
+	UpdateTime *time.Time
 }
 
 func MyTestFactory(kind string) (interface{}, error) {
@@ -447,6 +453,19 @@ func TestDecodeNestedObject(t *testing.T) {
 	Convey("Test OneOf decoding - invalid oneOf field kind", t, func() {
 		b := `{ "name": "john", "livesIn": [] }`
 		_, err := decode.UnmarshalJSONInto([]byte(b), &PetOwner{}, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("Test parsing and decoding with underlying type", t, func() {
+		b := `{ "name": "john", "updateTime": "2019-10-21T14:56:28.292468-06:00" }`
+		i, err := decode.UnmarshalJSONInto([]byte(b), &TimedStruct{}, nil)
+		So(err, ShouldBeNil)
+		expTime, _ := time.Parse(time.RFC3339, "2019-10-21T14:56:28.292468-06:00")
+		So(i.(*TimedStruct), ShouldResemble, &TimedStruct{Name: "john", UpdateTime: &expTime})
+
+	})
+	Convey("Test parsing and decoding with incorrect underlying type", t, func() {
+		b := `{ "name": "john", "updateTime": "string" }`
+		_, err := decode.UnmarshalJSONInto([]byte(b), &TimedStruct{}, nil)
 		So(err, ShouldNotBeNil)
 	})
 }
