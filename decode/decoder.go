@@ -194,8 +194,8 @@ func decodeIntoArray(field reflect.Value, iter iterator, len int, pf PathFactory
 	var ps reflect.Value
 	var et reflect.Type
 	// three options:
-	// - []*Type	- this can be manually created
 	// - *[]Type	- this is the codegen option
+	// - []*Type	- this can be manually created
 	// - []Type     - This is a required array
 	if field.Kind() == reflect.Ptr && field.Type().Elem().Kind() == reflect.Slice {
 		s = reflect.MakeSlice(field.Type().Elem(), len, len)
@@ -222,11 +222,20 @@ func decodeIntoArray(field reflect.Value, iter iterator, len int, pf PathFactory
 			if err != nil {
 				return err
 			}
+		}
 
-			// if field is *[]T, we need to deref this pointer
-			if ps.IsValid() {
-				pV = pV.Elem()
-			}
+		// If s is a slice of pointers and pV is not a pointer
+		if s.Type().Elem().Kind() == reflect.Ptr &&  pV.Kind() != reflect.Ptr  {
+			// Init a new zero value of that type in the index of slice, then set with pV value
+			s.Index(i).Set(reflect.New(s.Index(i).Type().Elem()))
+			s.Index(i).Elem().Set(pV)
+			i++
+			continue
+		}
+
+		//if s is NOT a slice of pointers and pV is a pointer, deref it before calling Set()
+		if s.Type().Elem().Kind() != reflect.Ptr && pV.Kind() == reflect.Ptr  {
+			pV = pV.Elem()
 		}
 		s.Index(i).Set(pV)
 		i++
@@ -238,7 +247,6 @@ func decodeIntoArray(field reflect.Value, iter iterator, len int, pf PathFactory
 
 	field.Set(s)
 	return nil
-
 }
 
 func decodeIntoArrayOfObjectsField(field reflect.Value, fldName string, obj []map[string]interface{}, pf PathFactory) error {
