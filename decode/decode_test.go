@@ -74,6 +74,16 @@ type LivesInRequiredArray struct {
 	LivesIn []string
 }
 
+type LivesInRequiredArrayNested struct {
+	Name    string
+	LivesIn []RequiredBasicTypes
+}
+
+type LivesInArrayOfPointers struct {
+	Name    string
+	LivesIn []*string
+}
+
 type RequiredBasicTypes struct {
 	Age  int
 	Name string
@@ -428,6 +438,22 @@ func TestDecodeNestedObject(t *testing.T) {
 		i, err := decode.UnmarshalJSONInto([]byte(b), &x, SchemaPathFactory)
 		So(err, ShouldBeNil)
 		So(i.(*LivesInRequiredArray), ShouldResemble, &LivesInRequiredArray{LivesIn: []string{"class", "Palace"}})
+	})
+	Convey("Test OneOf decoding - can decode into object that has required array with nested object", t, func() {
+		x := LivesInRequiredArrayNested{}
+		b := `{ "livesIn": [ { "age":7, "name": "spot", "lost": false } ] }`
+		i, err := decode.UnmarshalJSONInto([]byte(b), &x, SchemaPathFactory)
+		So(err, ShouldBeNil)
+		So(i.(*LivesInRequiredArrayNested), ShouldResemble, &LivesInRequiredArrayNested{LivesIn: []RequiredBasicTypes{{Age: 7, Name: "spot", Lost: false}}})
+	})
+	Convey("Test OneOf decoding - can decode into object that has an array of pointers", t, func() {
+		x := LivesInArrayOfPointers{}
+		b := `{ "livesIn": [ "class", "Palace" ]}`
+		i, err := decode.UnmarshalJSONInto([]byte(b), &x, SchemaPathFactory)
+		So(err, ShouldBeNil)
+		string1 := "class"
+		string2 := "Palace"
+		So(i.(*LivesInArrayOfPointers), ShouldResemble, &LivesInArrayOfPointers{LivesIn: []*string{&string1, &string2}})
 	})
 	Convey("Test OneOf decoding - can decode into object that has required basic types", t, func() {
 		y := LivesInStruct{}
