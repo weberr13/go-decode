@@ -159,7 +159,11 @@ func DecodeInto(m map[string]interface{}, o interface{}, pf PathFactory) (interf
 			nV := reflect.New(ft)
 
 			if !vV.Type().ConvertibleTo(ft) {
-				return nil, fmt.Errorf("cannot convert value (%v) to field '%s' type\n", v, fldName)
+				err := parseAndSetField(fldName, field, nV, vV)
+				if err != nil {
+					return nil, err
+				}
+				continue
 			}
 			nV.Elem().Set(vV.Convert(ft))
 			field.Set(nV.Elem().Addr())
@@ -347,4 +351,24 @@ func UnmarshalJSONInto(b []byte, o interface{}, pf PathFactory) (interface{}, er
 		return nil, err
 	}
 	return DecodeInto(m, o, pf)
+}
+
+func parseAndSetField(path string, field, newField, val reflect.Value) error {
+	unmarshaler, ok := newField.Interface().(json.Unmarshaler)
+	if ok {
+		// marshal val back to []byte since it was converted to some underlying type (int/string)
+		valBytes, err := json.Marshal(val.Interface());
+		if err != nil {
+			return fmt.Errorf("Cannot convert value to []byte when attempting to set '%s': %s", path, err) 
+		}
+		// unmarshal valBytes back into newField object via the unmarshaler
+		err = unmarshaler.UnmarshalJSON(valBytes)
+		if err != nil {
+			return fmt.Errorf("Cannot unmarshal byte values for field '%s': %s", path, err)
+		}
+		// set field to the value unmarshaled into newField
+		field.Set(newField)
+		return nil
+	}
+	return fmt.Errorf("cannot convert value (%v) to field '%s' type", val, path)
 }
