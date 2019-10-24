@@ -96,7 +96,7 @@ type LivesInStruct struct {
 }
 
 type TimedStruct struct {
-	Name string
+	Name       string
 	UpdateTime *time.Time
 }
 
@@ -494,9 +494,15 @@ func TestDecodeNestedObject(t *testing.T) {
 		_, err := decode.UnmarshalJSONInto([]byte(b), &TimedStruct{}, nil)
 		So(err, ShouldNotBeNil)
 	})
-	Convey("Test decoding -- cannot decode when field is set to null", t, func() {
-		b := `{ "livesIn" : { "age": 7, "name": null, "lost": false}}`
-		_, err := decode.UnmarshalJSONInto([]byte(b), &LivesInStruct{}, SchemaPathFactory)
+	Convey("Test decoding -- cannot decode when required field is set to null", t, func() {
+		b := `{ "name": null, "updateTime": "2019-10-21T14:56:28.292468-06:00"}`
+		_, err := decode.UnmarshalJSONInto([]byte(b), &TimedStruct{}, SchemaPathFactory)
 		So(err, ShouldNotBeNil)
+	})
+	Convey("Test decoding -- allow decode when unrequired field is set to null", t, func() {
+		b := `{ "name": "john", "updateTime": null }`
+		i, err := decode.UnmarshalJSONInto([]byte(b), &TimedStruct{}, SchemaPathFactory)
+		So(err, ShouldBeNil)
+		So(i.(*TimedStruct), ShouldResemble, &TimedStruct{Name: "john"})
 	})
 }

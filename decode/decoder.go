@@ -151,7 +151,11 @@ func DecodeInto(m map[string]interface{}, o interface{}, pf PathFactory) (interf
 			}
 			continue
 		case nil:
-			return nil, fmt.Errorf("Invalid value: Null not allowed field '%v'", fldName)
+			// if field is required, return an error, otherwise ignore it
+			if field.Kind() != reflect.Ptr {
+				return nil, fmt.Errorf("Invalid value: Null not allowed for required field '%v'\n", fldName)
+			}
+			continue
 		}
 
 		// use reflection to set the field
@@ -231,7 +235,7 @@ func decodeIntoArray(field reflect.Value, iter iterator, len int, pf PathFactory
 		}
 
 		// If s is a slice of pointers and pV is not a pointer
-		if s.Type().Elem().Kind() == reflect.Ptr &&  pV.Kind() != reflect.Ptr  {
+		if s.Type().Elem().Kind() == reflect.Ptr && pV.Kind() != reflect.Ptr {
 			// Init a new zero value of that type in the index of slice, then set with pV value
 			s.Index(i).Set(reflect.New(s.Index(i).Type().Elem()))
 			s.Index(i).Elem().Set(pV)
@@ -240,7 +244,7 @@ func decodeIntoArray(field reflect.Value, iter iterator, len int, pf PathFactory
 		}
 
 		//if s is NOT a slice of pointers and pV is a pointer, deref it before calling Set()
-		if s.Type().Elem().Kind() != reflect.Ptr && pV.Kind() == reflect.Ptr  {
+		if s.Type().Elem().Kind() != reflect.Ptr && pV.Kind() == reflect.Ptr {
 			pV = pV.Elem()
 		}
 		s.Index(i).Set(pV)
@@ -359,18 +363,18 @@ func parseAndSetField(path string, field, newField, val reflect.Value) error {
 	unmarshaler, ok := newField.Interface().(json.Unmarshaler)
 	if ok {
 		// marshal val back to []byte since it was converted to some underlying type (int/string)
-		valBytes, err := json.Marshal(val.Interface());
+		valBytes, err := json.Marshal(val.Interface())
 		if err != nil {
-			return fmt.Errorf("Cannot convert value to []byte when attempting to set '%s': %s", path, err) 
+			return fmt.Errorf("Cannot convert value to []byte when attempting to set '%s': %s\n", path, err)
 		}
 		// unmarshal valBytes back into newField object via the unmarshaler
 		err = unmarshaler.UnmarshalJSON(valBytes)
 		if err != nil {
-			return fmt.Errorf("Cannot unmarshal byte values for field '%s': %s", path, err)
+			return fmt.Errorf("Cannot unmarshal byte values for field '%s': %s\n", path, err)
 		}
 		// set field to the value unmarshaled into newField
 		field.Set(newField)
 		return nil
 	}
-	return fmt.Errorf("cannot convert value (%v) to field '%s' type", val, path)
+	return fmt.Errorf("cannot convert value (%v) to field '%s' type\n", val, path)
 }
