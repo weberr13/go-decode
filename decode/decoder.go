@@ -150,6 +150,8 @@ func DecodeInto(m map[string]interface{}, o interface{}, pf PathFactory) (interf
 				return nil, e
 			}
 			continue
+		case nil:
+			return nil, fmt.Errorf("Invalid value: Null not allowed field '%v'", fldName)
 		}
 
 		// use reflection to set the field

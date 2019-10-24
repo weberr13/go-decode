@@ -494,4 +494,9 @@ func TestDecodeNestedObject(t *testing.T) {
 		_, err := decode.UnmarshalJSONInto([]byte(b), &TimedStruct{}, nil)
 		So(err, ShouldNotBeNil)
 	})
+	Convey("Test decoding -- cannot decode when field is set to null", t, func() {
+		b := `{ "livesIn" : { "age": 7, "name": null, "lost": false}}`
+		_, err := decode.UnmarshalJSONInto([]byte(b), &LivesInStruct{}, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+	})
 }
