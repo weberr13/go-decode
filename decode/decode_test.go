@@ -6,6 +6,7 @@ package decode_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"testing"
@@ -15,9 +16,35 @@ import (
 	"github.com/weberr13/go-decode/decode"
 )
 
+var testSPF = func(s string) (func(map[string]interface{}) (interface{}, error), error) { return nil, nil }
+var testErrSPF = func(s string) (func(map[string]interface{}) (interface{}, error), error) { return testErrFactory, nil }
+var testErrFactory = func(o map[string]interface{}) (interface{}, error) { return nil, errors.New("Wrong Discriminator") }
+
+type StructWithDefaults struct {
+	Val     string     `default:"STRING_VAL"`
+	Ptr     *string    `default:"STRING_PTR"`
+	Int     int        `default:"-7"`
+	UInt    uint       `default:"12"`
+	Time    time.Time  `default:"2019-10-28T12:35:56Z"`
+	PTime   *time.Time `default:"2019-10-28T23:45:10Z"`
+	Int8    int8       `default:"127"`
+	UInt8   uint8      `default:"127"`
+	Int16   int16      `default:"32767"`
+	UInt16  uint16     `default:"65535"`
+	Int32   int32      `default:"2147483647"`
+	UInt32  uint32     `default:"4294967295"`
+	Int64   int64      `default:"32767"`
+	UInt64  uint64     `default:"65535"`
+	Float32 float32    `default:"1.0"`
+	Float64 float64    `default:"1.0"`
+	Bool    bool       `default:"true"`
+
+	SR SubRecord
+}
+
 type SubRecord struct {
 	kind string
-	Name *string
+	Name *string `default:"James"`
 }
 
 type MyString string
@@ -385,6 +412,23 @@ func TestDecodeNestedObject(t *testing.T) {
 		_, err = decode.UnmarshalJSON(b[1:], "kind", MyTestFactory)
 		So(err, ShouldNotBeNil)
 	})
+	Convey("Test decoding - bad payload - array when array is not expected", t, func() {
+		m := map[string]interface{}{
+			"name": []map[string]interface{}{
+				{
+					"kind": "sub_record",
+					"name": "1",
+				},
+			},
+		}
+		_, err := decode.DecodeInto(m, &PetOwner{}, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("Test parsing and decoding - bad payload - object when object is not expected", t, func() {
+		b := `{ "name": { "type": "Palace"}}`
+		_, err := decode.UnmarshalJSONInto([]byte(b), &PetOwner{}, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+	})
 	Convey("Test OneOf decoding - pets1.json", t, func() {
 		// load spec from testdata identified by file
 		bytes, err := ioutil.ReadFile("testdata/pets1.json")
@@ -401,9 +445,15 @@ func TestDecodeNestedObject(t *testing.T) {
 		So(err, ShouldBeNil)
 	})
 	Convey("Test OneOf decoding - array of user crafted objects ", t, func() {
-		var y = struct{ LivesIn *[]struct{ Age *int } }{}
-		var x = struct{ LivesIn []*struct{ Age *int } }{}
-		var z = struct{ LivesIn []*struct{ Age int } }{}
+		var y = struct {
+			LivesIn *[]struct{ Age *int }
+		}{}
+		var x = struct {
+			LivesIn []*struct{ Age *int }
+		}{}
+		var z = struct {
+			LivesIn []*struct{ Age int }
+		}{}
 		m := map[string]interface{}{
 			"livesIn": []map[string]interface{}{
 				{"age": 7},
@@ -430,6 +480,11 @@ func TestDecodeNestedObject(t *testing.T) {
 	})
 	Convey("Test OneOf decoding - wrong oneOf discriminator", t, func() {
 		b := `{ "name": "john", "livesIn": { "class": "Palace"}}`
+		_, err := decode.UnmarshalJSONInto([]byte(b), &PetOwner{}, SchemaPathFactory)
+		So(err, ShouldNotBeNil)
+	})
+	Convey("Test OneOf decoding - invalid discriminator value", t, func() {
+		b := `{ "name": "john", "livesIn": {"type": "car"} }`
 		_, err := decode.UnmarshalJSONInto([]byte(b), &PetOwner{}, SchemaPathFactory)
 		So(err, ShouldNotBeNil)
 	})
@@ -494,6 +549,11 @@ func TestDecodeNestedObject(t *testing.T) {
 		_, err := decode.UnmarshalJSONInto([]byte(b), &TimedStruct{}, nil)
 		So(err, ShouldNotBeNil)
 	})
+	Convey("Test parsing and decoding with incorrect field type in payload", t, func() {
+		b := `{ "name": { "type": "john"}, "updateTime": "string" }`
+		_, err := decode.UnmarshalJSONInto([]byte(b), &TimedStruct{}, testSPF)
+		So(err, ShouldNotBeNil)
+	})
 	Convey("Test decoding -- cannot decode when required field is set to null", t, func() {
 		b := `{ "name": null, "updateTime": "2019-10-21T14:56:28.292468-06:00"}`
 		_, err := decode.UnmarshalJSONInto([]byte(b), &TimedStruct{}, SchemaPathFactory)
@@ -505,4 +565,86 @@ func TestDecodeNestedObject(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(i.(*TimedStruct), ShouldResemble, &TimedStruct{Name: "john"})
 	})
+}
+
+// Test that fields for which there's no value in a payload are still set from defaults specified in struct tags
+// *Note* the tests here MUST match the contents of the tags specified in the struct variable up the top of the file
+func TestDefaultValues(t *testing.T) {
+
+	m := map[string]interface{}{}
+	Convey("Setting All Defaults", t, func() {
+		swd := &StructWithDefaults{}
+		_, err := decode.DecodeIntoWithDefaults(m, swd, testSPF, true)
+		So(err, ShouldBeNil)
+		So(swd.Int, ShouldEqual, -7)
+		So(swd.UInt, ShouldEqual, 12)
+		So(swd.Val, ShouldEqual, "STRING_VAL")
+		So(swd.Ptr, ShouldNotBeNil)
+		sp := "STRING_PTR"
+		So(swd.Ptr, ShouldResemble, &sp)
+		tm, _ := time.Parse(time.RFC3339, "2019-10-28T12:35:56Z")
+		So(swd.Time, ShouldEqual, tm)
+		tm, _ = time.Parse(time.RFC3339, "2019-10-28T23:45:10Z")
+		So(swd.PTime, ShouldResemble, &tm)
+
+		So(swd.Int8, ShouldEqual, 127)
+		So(swd.UInt8, ShouldEqual, 127)
+		So(swd.Int16, ShouldEqual, 32767)
+		So(swd.UInt16, ShouldEqual, 65535)
+		So(swd.Int32, ShouldEqual, 2147483647)
+		So(swd.UInt32, ShouldEqual, 4294967295)
+		So(swd.Int64, ShouldEqual, 32767)
+		So(swd.UInt64, ShouldEqual, 65535)
+
+		So(swd.Float32, ShouldEqual, 1.0)
+		So(swd.Float64, ShouldEqual, 1.0)
+		So(swd.Bool, ShouldEqual, true)
+
+		// no payload, so SR.Name should be nil
+		So(swd.SR.Name, ShouldBeNil)
+
+	})
+
+	m = map[string]interface{}{"SR": map[string]interface{}{}}
+	Convey("Setting Nested field Defaults", t, func() {
+		swd := &StructWithDefaults{}
+
+		_, err := decode.DecodeIntoWithDefaults(m, swd, testSPF, true)
+		So(err, ShouldBeNil)
+
+		So(swd.SR.Name, ShouldNotBeNil)
+		james := "James"
+		So(swd.SR.Name, ShouldResemble, &james)
+
+	})
+
+	Convey("Bad default values", t, func() {
+		type BIS struct {
+			BadIntStr int `default:"aaaa"`
+		}
+		type BB struct {
+			BadBool bool `default:"text"`
+		}
+		type BF32 struct {
+			BadFloat32 bool `default:"1E1234567"`
+		}
+		type BTC struct {
+			Chan chan int `default:"1E1234567"`
+		}
+		type BTS struct {
+			Time *time.Time `default:"--123"`
+		}
+
+		_, err := decode.DecodeIntoWithDefaults(m, &BIS{}, testSPF, true)
+		So(err, ShouldNotBeNil)
+		_, err = decode.DecodeIntoWithDefaults(m, &BB{}, testSPF, true)
+		So(err, ShouldNotBeNil)
+		_, err = decode.DecodeIntoWithDefaults(m, &BF32{}, testSPF, true)
+		So(err, ShouldNotBeNil)
+		_, err = decode.DecodeIntoWithDefaults(m, &BTC{}, testSPF, true)
+		So(err, ShouldNotBeNil)
+		_, err = decode.DecodeIntoWithDefaults(m, &BTS{}, testSPF, true)
+		So(err, ShouldNotBeNil)
+	})
+
 }
